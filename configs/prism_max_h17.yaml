@@ -1,0 +1,31 @@
+﻿model_name: nanyang-Prism-Max-H1.7
+version: 1.7.0a0
+seed: 42
+
+# 引擎默认配置
+engines:
+  minimax-h3:
+    api_base: https://api.minimax.io/v1
+    model: mini-max/h3-v1
+    cache_dir: ~/.cache/nanyang-prism/engine-cache
+
+  sdxl:
+    repo_id: stabilityai/sdxl-turbo    # turbo 版仅需 4 步；base 版请改成 stabilityai/stable-diffusion-xl-base-1.0
+    device: cuda
+    cache_dir: ~/.cache/nanyang-prism/sdxl-cache
+
+  animatediff:
+    video_repo: cerspense/zeroscope_v2_576w
+    motion_lora_repo: guoyww/animatediff-motion-lora
+    device: cuda
+    cache_dir: ~/.cache/nanyang-prism/animatediff-cache
+
+# 生成默认参数
+defaults:
+  image_size: 1024
+  image_steps: 4
+  image_cfg_scale: 1.0      # turbo 模型不需要 CFG guidance
+  video_duration: 15.0
+  video_fps: 12
+  video_audio: true
+  batch_size: 1
