@@ -1,4 +1,4 @@
-﻿import time
+import time
 from pathlib import Path
 from typing import Tuple
 
@@ -13,12 +13,16 @@ from .base import BaseAdapter
 DEFAULT_ANIMATEDIFF_REPO = 'guoyww/animatediff-motion-lora'
 DEFAULT_VIDEO_REPO = 'cerspense/zeroscope_v2_576w'
 
+# 最长支持视频帧数（fps=12 时约对应 30 秒）
+MAX_FRAMES = 360   # 30s @ 12fps
+
 
 class AnimatedDiffAdapter(BaseAdapter):
-    \"\"\"AnimateDiff + Zeroscope 视频生成适配器。
+    """AnimateDiff + Zeroscope 视频生成适配器。
 
     首跑自动下载约 8 GB 权重到 ~/.cache/nanyang-prism/animatediff-cache/。
-    \"\"\"
+    完全离线运行，无需任何外部服务。
+    """
 
     def __init__(self, device: str = 'cuda'):
         self.device = device
@@ -52,12 +56,16 @@ class AnimatedDiffAdapter(BaseAdapter):
     def generate_image(self, *a, **kw):
         raise NotImplementedError('AnimateDiff 专门用于视频生成，请用 sdxl 获取单帧图')
 
-    def generate_video(self, prompt, negative_prompt='', duration=15.0, fps=12, audio=True) -> Path:
+    def generate_video(self, prompt, negative_prompt='', duration=30.0, fps=12, audio=True) -> Path:
         pipe = self._load_pipe()
-        num_frames = int(duration * fps)
+        num_frames = min(int(duration * fps), MAX_FRAMES)
+        if num_frames > MAX_FRAMES:
+            duration = MAX_FRAMES / fps
+            print(f'提示：视频已截断为 {duration:.1f} 秒（{num_frames} 帧），这是当前引擎上限。')
         out = self.cache_dir / f'vid_{int(time.time())}.mp4'
         frames = pipe(prompt=prompt, negative_prompt=negative_prompt,
                       num_frames=num_frames, width=576, height=320,
-                      num_inference_steps=25, guidance_scale=8.0).frames[0]
+                      num_inference_steps=min(25, max(10, num_frames // 5)),
+                      guidance_scale=8.0).frames[0]
         export_to_video(frames, str(out), fps=fps)
         return out
