@@ -1,63 +1,70 @@
-﻿# nanyang-Prism-Max-H1.7
+# nanyang-Prism-Max-H1.7
 
-**全新生成底座 · 接 MiniMax H3 / SDXL 等商用引擎 · 对话与生成彻底解耦**
+**全新生成底座 · 接入图形化大型生成 · 对话与生成彻底解耦**
 
+---
 
-anyang-Prism-Max-H1.7 是南阳系列中专攻 **图像/视频生成** 的产品，与「南阳 GPT」对话模型完全分离：各自独立仓库、独立训练、独立维护。
+nanyang-Prism-Max-H1.7 是南阳系列中专攻 **图像/视频生成** 的产品，与「南阳 GPT」对话模型完全分离：各自独立仓库、独立维护。
 
-模型规模约 **25 GB**（fp16），采用多引擎适配器架构——底层接入 MiniMax H3 等成熟商业/开源生成底座，上层提供统一的 prompt $\rightarrow$ 真图/真视频调用接口。
-
-## 架构速览
-
-\\\
-用户 Prompt $\rightarrow$  nanyang-GPT (对话层)  $\rightarrow$ 工具标记 $\rightarrow$  Prism Max H1.7
-                                                        $|$
-                                          $\leftrightarrow$ MiniMax H3 / SDXL / Flux / AnimatedDiff
-\\\
-
-- **对话与生成彻底分离**：nanyang-GPT 只做聊天；Prism Max H1.7 只做生成
-- **多引擎可插拔**：新增引擎只需实现对应 Adapter 类并注册
-- **统一工具协议**：沿用 <|gen_image|> / <|gen_video|> 标准标记
-
-## 特性
-
-| 项 | 说明 |
-| --- | --- |
-| 生成类型 | 高清图片（最高 1024px+）、15 秒带音频视频 |
-| 适配引擎 | MiniMax H3（主力）、SDXL、Flux、AnimatedDiff（可扩展） |
-| 模型规模 | ~25 GB（含多引擎权重 + 文本编码器 + VAE） |
-| 输出格式 | PNG / MP4 + AAC 音轨 |
-| 部署方式 | CLI / Python API / HTTP Server |
-| 对话耦合 | **无**——对话由独立仓库 nanyang-GPT 负责 |
+版本路线说明：
+- **Helios 1.2 / 1.5 已停止使用**，仅保留自研代码供查看，不再提供模型拉取/下载链接。
+- **自研生成路线已放弃**，新版本切换到全新建设路线。
+- 当前主推 **Prism H1.7**，接入图形化大型生成底座，持续往上迭代。
 
 ## 快速开始
 
-\\\ash
+```bash
 git clone https://github.com/Yang1235744/nanyang-Prism-Max-H1.7.git
 cd nanyang-Prism-Max-H1.7
 pip install -r requirements.txt
 
-python scripts/download_weights.py --engine minimax-h3
-python -m prism.max generate --engine minimax-h3 --prompt "一只橘猫在阳光下打盹" --size 1024 --out out.png
-python -m prism.max generate --engine animatediff --prompt "猫咪跳上窗台" --duration 15 --fps 12 --audio true --out out.mp4
-\\\
+# 设置 API 密钥（从 .env.example 复制后填入真实密钥）
+cp .env.example .env
+```
 
-## 引擎适配器 API
+### 配置 MiniMax H3
 
-\\\python
-from prism.adapters import get_engine
+在 `.env` 或环境变量中填入以下信息：
 
-client = get_engine("minimax-h3")
-img = client.generate("一只橘猫", size=(1024,1024))   # PIL.Image
-mp4 = client.generate("猫咪跳上窗台", output_type="video", duration=15)   # pathlib.Path
-\\\
+```bash
+export MINIMAX_API_KEY="sk-api-YBHaqZGNzc40ywK5G-Be5om9jguhB3REjlgv05NWtsN7cX1Y6e1g3Me8-wGsa2D6rkGg0KNaCvOg3iUAnth0ToOv5mk2whgR14S6PfeA6DuIJN35JLkZdHw"
+# 可选：自定义端点（默认已是 easyframe.cn 代理）
+export MINIMAX_API_BASE="https://minimax.api.easyframe.cn/api/v3"
+```
+
+### 运行
+
+```bash
+# 生成图片
+python scripts/generate.py --engine minimax-h3 \
+    --prompt "雪地里的红狐" --t image --size 1024 1024
+
+# 生成 15 秒带音频视频
+python scripts/generate.py --engine minimax-h3 \
+    --prompt "海浪拍打礁石" --t video --duration 15 --fps 12
+```
+
+## 架构
+
+```
+用户 Prompt → nanyang-GPT (对话层) → 工具标记 <|gen_image|> <|gen_video|>
+                                              ↓
+                                   Prism Max H1.7
+                                     （生成层）
+                                              ↓
+                                   接入图形化大型生成底座（MiniMax H3）
+```
+
+- **对话与生成彻底分离**：nanyang-GPT 只做聊天；Prism Max H1.7 只做生成
+- **统一接口**：所有引擎实现 `BaseAdapter`，可插拔扩展
+- **环境配置**：API key 走环境变量，不硬编码进源码
 
 ## 路线图
 
 - [x] v1.7.0a0 — 骨架发布 · 多引擎适配器框架
-- [ ] v1.7.1 — MiniMax H3 正式集成 + 首批真图测试
-- [ ] v1.7.2 — Flux / SDXL 双通道支持
-- [ ] v1.8 — 剧情对白 + 口型同步
+- [x] v1.7.1 — MiniMax H3 正式集成 + API 密钥接入
+- [ ] v1.7.2 — 更多引擎可插拔（本地兜底通道）
+- [ ] v1.8 — 口型同步，剧情对白
 - [ ] v1.9 — 批量生产流水线
 
 ## 许可
